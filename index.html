@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blend Mode Trails</title>
+
+    <link rel="icon" href="favicon.png" type="image/png">
+    
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+        }
+
+        #control-panel-container {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            z-index: 1000;
+            transition: width 0.5s;
+        }
+
+        #settings-container {
+            box-sizing: border-box;
+            width: 40px;
+            height: 40px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            background: white;
+            padding: 5px;
+            min-height: 40px;
+            cursor: pointer;
+        }
+
+        #control-icon {
+            cursor: pointer;
+            fill: #555;
+            width: 30px;
+            height: 30px;
+        }
+
+        .control-panel-content {
+            display: none;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            background: #FFF;
+            border-radius: 4px;
+            margin-top: 10px;
+            padding: 10px;
+            width: 300px;
+        }
+
+        .control-panel-content label {
+            font-size: 14px;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+
+        .control-panel-content input,
+        .control-panel-content button {
+            margin: 5px 0;
+            padding: 5.5px 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: #f7f7f7;
+        }
+
+        .control-panel-content input {
+            flex-grow: 1;
+        }
+
+        .control-panel-content input:hover,
+        .control-panel-content button:hover {
+            background: #eaeaea;
+        }
+
+        .control-panel-content button {
+            cursor: pointer;
+        }
+
+        #canvas-svg {
+            width: 100vw;
+            height: 100vh;
+            position: absolute;
+            top: 0;
+            left: 0;
+            cursor: none;
+        }
+
+        #current-mode-container {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+        }
+
+        #mode {
+            display: flex;
+            flex-grow: 1;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #blendCurr {
+            box-sizing: border-box;
+            height: 31.5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-grow: 1;
+            /* background: gainsboro; */
+            border: 1px solid #ddd;
+            border-right: none;
+            border-left: none;
+        }
+
+        #setting-line {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="control-panel-container">
+        <!-- Control Icon -->
+        <div id="settings-container">
+            <svg id="settings-svg" width="30" height="30" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path fill="#000000"
+                    d="m9.25 22l-.4-3.2q-.325-.125-.613-.3t-.562-.375L4.7 19.375l-2.75-4.75l2.575-1.95Q4.5 12.5 4.5 12.337v-.674q0-.163.025-.338L1.95 9.375l2.75-4.75l2.975 1.25q.275-.2.575-.375t.6-.3l.4-3.2h5.5l.4 3.2q.325.125.613.3t.562.375l2.975-1.25l2.75 4.75l-2.575 1.95q.025.175.025.338v.674q0 .163-.05.338l2.575 1.95l-2.75 4.75l-2.95-1.25q-.275.2-.575.375t-.6.3l-.4 3.2h-5.5Zm2.8-6.5q1.45 0 2.475-1.025T15.55 12q0-1.45-1.025-2.475T12.05 8.5q-1.475 0-2.488 1.025T8.55 12q0 1.45 1.012 2.475T12.05 15.5Z" />
+            </svg>
+        </div>
+
+        <!-- Expanded Control Panel -->
+        <div class="control-panel-content">
+
+            <div id="current-mode-container">
+                <div id="mode">
+                    <label>Blending mode:</label>
+                    <button id="prev-blend"
+                        style="border-top-right-radius: 0px; border-bottom-right-radius: 0px;">&#8678;</button>
+                    <span id="blendCurr">multiply</span>
+                    <button id="next-blend"
+                        style="border-top-left-radius: 0px; border-bottom-left-radius: 0px;">&#8680;</button>
+                </div>
+            </div>
+
+            <div id="setting-line">
+                <label for="num-circle">Num Circle: </label>
+                <input type="number" id="num-circle" value="10">
+            </div>
+            <div id="setting-line">
+                <label for="circle-size">Circle Size: </label>
+                <input type="number" id="circle-size" value="50">
+            </div>
+
+            <div id="setting-line">
+                <label for="max-delay">Max Delay: </label>
+                <input type="number" id="max-delay" value="200">
+            </div>
+        </div>
+    </div>
+
+    <svg id="canvas-svg"></svg>
+
+    <script>
+        const svg = document.querySelector('#canvas-svg');
+        const blendCurr = document.querySelector("#blendCurr");
+
+        const num_circles = 10;
+        var max_delay = 200;
+        const circle_size = 50
+
+        let blendModes = [
+            "normal", "multiply", "screen", "overlay", "darken",
+            "lighten", "color-dodge", "color-burn", "hard-light",
+            "soft-light", "difference", "exclusion", "hue",
+            "saturation", "color", "luminosity"
+        ];
+        let currentBlendModeIndex = 1;
+
+        let circles = [];
+        for (let i = 0; i < num_circles; i++) {
+            const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+            circle.setAttribute('r', circle_size);
+            circle.setAttribute('cx', '0');
+            circle.setAttribute('cy', '0');
+            const hue = i * (255 / num_circles);
+            const saturation = "100%";
+            const lightness = "50%";
+            circle.style.fill = `hsl(${hue}, ${saturation}, ${lightness})`;
+            circle.style.mixBlendMode = blendModes[currentBlendModeIndex];
+            svg.appendChild(circle);
+            const delay = i * (max_delay / num_circles);
+            circles.push({ elem: circle, delay: delay });
+        }
+
+        // Track all the recent mouse positions
+        var pastPositions = [];
+
+        document.addEventListener('mousemove', (e) => {
+            // Record the position and current time for every mousemove event
+            pastPositions.push({ x: e.clientX, y: e.clientY, time: Date.now() });
+        });
+
+
+        function populatePastPositions(maxDelay) {
+            const currentTime = Date.now();
+            const lastPosition = pastPositions[pastPositions.length - 1] || { x: 0, y: 0 };
+
+            while (pastPositions.length < maxDelay) {
+                pastPositions.push({ x: lastPosition.x, y: lastPosition.y, time: currentTime - pastPositions.length });
+            }
+        }
+
+        function animate() {
+            const currentTime = Date.now();
+
+            // Update position of each circle based on its delay
+            circles.forEach((circleData, index) => {
+                // Find the position in the past that's just older than the circle's delay
+                for (let i = pastPositions.length - 1; i >= 0; i--) {
+                    if (currentTime - pastPositions[i].time > circleData.delay) {
+                        circleData.elem.setAttribute('cx', pastPositions[i].x);
+                        circleData.elem.setAttribute('cy', pastPositions[i].y);
+                        break;
+                    }
+                }
+            });
+
+            // Cleanup: Remove old positions that are not used by any circle
+            const oldestNeededTime = currentTime - max_delay;
+            while (pastPositions.length && pastPositions[0].time < oldestNeededTime) {
+                pastPositions.shift();
+            }
+
+            requestAnimationFrame(animate);
+        }
+
+        requestAnimationFrame(animate);
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft') changeBlendModePrev();
+            if (e.key === 'ArrowRight') changeBlendModeNext();
+        });
+
+        function changeBlendModePrev() {
+            currentBlendModeIndex = (currentBlendModeIndex - 1 + blendModes.length) % blendModes.length;
+            updateBlendMode();
+        }
+
+        function changeBlendModeNext() {
+            currentBlendModeIndex = (currentBlendModeIndex + 1) % blendModes.length;
+            updateBlendMode();
+        }
+
+        function updateBlendMode() {
+            circles.forEach(circleData => {
+                circleData.elem.style.mixBlendMode = blendModes[currentBlendModeIndex];
+            });
+            blendCurr.textContent = `${blendModes[currentBlendModeIndex]}`;
+        }
+
+        // Select the settings container and control panel content
+        const settingsContainer = document.querySelector("#settings-container");
+        const controlPanelContent = document.querySelector(".control-panel-content");
+
+        // Add an event listener to the settings container
+        settingsContainer.addEventListener('click', () => {
+            // Toggle the display of the control panel content
+            if (controlPanelContent.style.display === "none" || controlPanelContent.style.display === "") {
+                controlPanelContent.style.display = "block";
+            } else {
+                controlPanelContent.style.display = "none";
+            }
+        });
+
+        const numCircleInput = document.getElementById('num-circle');
+        const circleSizeInput = document.getElementById('circle-size');
+        const maxDelayInput = document.getElementById('max-delay');
+
+        const blendPrevButton = document.getElementById('prev-blend');
+        const blendNextButton = document.getElementById('next-blend');
+
+        // Update number of circles based on input
+        numCircleInput.addEventListener('change', function () {
+            const newNumCircles = parseInt(numCircleInput.value);
+            while (circles.length < newNumCircles) {
+                const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                svg.appendChild(circle);
+                circles.push({ elem: circle, delay: 0 });
+            }
+            while (circles.length > newNumCircles) {
+                const circleData = circles.pop();
+                svg.removeChild(circleData.elem);
+            }
+            updateCircles();
+        });
+
+        // Update circle size based on input
+        circleSizeInput.addEventListener('change', function () {
+            updateCircles();
+        });
+
+        // Update delay based on input
+        const body = document.querySelector('body');
+        maxDelayInput.addEventListener('change', function () {
+            max_delay = parseInt(maxDelayInput.value);
+            // Reset circles and past positions
+            circles.forEach(circle => {
+                circle.x = body.width / 2;
+                circle.y = body.height / 2;
+            });
+            pastPositions = [];
+            populatePastPositions(max_delay);
+
+            // Reassign delays to circles
+            delays = [];
+            for (let i = 0; i < numCircleInput.val; i++) {
+                delays.push(Math.floor(Math.random() * max_delay));
+            }
+
+            updateCircles();
+        });
+
+
+        function updateCircles() {
+            const newCircleSize = parseInt(circleSizeInput.value);
+            circles.forEach((circleData, index) => {
+                circleData.elem.setAttribute('r', newCircleSize);
+                const hue = index * (255 / circles.length);
+                circleData.elem.style.fill = `hsl(${hue}, 100%, 50%)`;
+                circleData.delay = index * (max_delay / circles.length);
+            });
+        }
+
+        function getPastPosition(delay) {
+            const currentTime = Date.now();
+            for (let i = pastPositions.length - 1; i >= 0; i--) {
+                if (currentTime - pastPositions[i].time > delay) {
+                    return pastPositions[i];
+                }
+            }
+            return null; // or a fallback position if needed
+        }
+
+        // Add click event listeners to the blending mode buttons
+        blendPrevButton.addEventListener('click', changeBlendModePrev);
+        blendNextButton.addEventListener('click', changeBlendModeNext);
+    </script>
+</body>
+
+</html>
