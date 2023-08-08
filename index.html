@@ -8,7 +8,7 @@
     <title>Blend Mode Trails</title>
 
     <link rel="icon" href="favicon.png" type="image/png">
-    
+
     <style>
         body {
             font-family: 'Arial', sans-serif;
@@ -20,6 +20,26 @@
             left: 10px;
             z-index: 1000;
             transition: width 0.5s;
+        }
+
+        #clear-container {
+            left: 51px;
+            top: 0px;
+            position: absolute;
+            box-sizing: border-box;
+            width: 40px;
+            height: 40px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            background: white;
+            padding: 5px;
+            min-height: 40px;
+            cursor: pointer;
+            z-index: 2;
         }
 
         #settings-container {
@@ -90,6 +110,8 @@
             top: 0;
             left: 0;
             cursor: none;
+            z-index: 1;
+            pointer-events: none;
         }
 
         #current-mode-container {
@@ -136,6 +158,18 @@
             </svg>
         </div>
 
+        <div id="clear-container" onclick="clearCanvas()">
+            <svg width="512" height="512" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+                <mask id="ipSErase0">
+                    <g fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width="4">
+                        <path d="M4 42h40" />
+                        <path fill="#fff" d="M31 4L7 28l6 6h8l20-20L31 4Z" />
+                    </g>
+                </mask>
+                <path fill="#000000" d="M0 0h48v48H0z" mask="url(#ipSErase0)" />
+            </svg>
+        </div>
+
         <!-- Expanded Control Panel -->
         <div class="control-panel-content">
 
@@ -167,6 +201,7 @@
     </div>
 
     <svg id="canvas-svg"></svg>
+    <canvas id="canvas" style="position: absolute; top: 0; left: 0;"></canvas>
 
     <script>
         const svg = document.querySelector('#canvas-svg');
@@ -352,6 +387,62 @@
         // Add click event listeners to the blending mode buttons
         blendPrevButton.addEventListener('click', changeBlendModePrev);
         blendNextButton.addEventListener('click', changeBlendModeNext);
+
+        function clearCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+
+        // Get a reference to the canvas element and its 2D context
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        function setCanvasSize() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            canvas.setAttribute('width', window.innerWidth);
+            canvas.setAttribute('height', window.innerHeight);
+        }
+
+        // Set the initial size
+        setCanvasSize();
+        window.addEventListener('resize', setCanvasSize);
+
+        let isDrawing = false;
+
+        // Mousedown event to start drawing
+        canvas.addEventListener('mousedown', function () {
+            isDrawing = true;
+            ctx.globalCompositeOperation = blendModes[currentBlendModeIndex];
+        });
+
+        // Mouseup event to stop drawing
+        canvas.addEventListener('mouseup', function () {
+            isDrawing = false;
+            ctx.beginPath(); // This clears the path and ensures a new drawing begins when mousedown occurs again
+        });
+
+        // Mousemove event to draw as the mouse is moving
+        canvas.addEventListener('mousemove', draw);
+
+        // Function to handle the drawing
+        function draw(event) {
+            if (!isDrawing) return; // Only draw when mouse is down
+
+            ctx.globalCompositeOperation = blendModes[currentBlendModeIndex];
+            // Iterate over the circles and draw each one to the canvas
+            circles.forEach(circleData => {
+                const cx = parseInt(circleData.elem.getAttribute('cx'));
+                const cy = parseInt(circleData.elem.getAttribute('cy'));
+                const r = parseInt(circleData.elem.getAttribute('r'));
+                const fill = circleData.elem.style.fill;
+
+                // Draw the circle with its current position, size, and color
+                ctx.beginPath();
+                ctx.arc(cx, cy, r, 0, 2 * Math.PI, false);
+                ctx.fillStyle = fill;
+                ctx.fill();
+            });
+        }
+
     </script>
 </body>
 
