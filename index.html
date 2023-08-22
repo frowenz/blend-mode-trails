@@ -58,6 +58,7 @@
             cursor: pointer;
         }
 
+
         #control-icon {
             cursor: pointer;
             fill: #555;
@@ -145,10 +146,44 @@
             align-items: center;
             justify-content: space-between;
         }
+
+
+        #save-container {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+
+            position: absolute;
+            box-sizing: border-box;
+            width: 40px;
+            height: 40px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            background: white;
+            padding: 5px;
+            min-height: 40px;
+            cursor: pointer;
+            z-index: 2;
+        }
+
+        #randomize-button {
+            width: 100%;
+        }
     </style>
 </head>
 
 <body>
+    <div id="save-container" onclick="download()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24"
+            style="fill: rgba(0, 0, 0, 1);">
+            <path d="M19 9h-4V3H9v6H5l7 8zM4 19h16v2H4z"></path>
+        </svg>
+    </div>
+
     <div id="control-panel-container">
         <!-- Control Icon -->
         <div id="settings-container">
@@ -196,6 +231,10 @@
             <div id="setting-line">
                 <label for="max-delay">Max Delay: </label>
                 <input type="number" id="max-delay" value="200">
+            </div>
+
+            <div id="setting-line">
+                <button id="randomize-button" onclick="randomizeSettings()"> Randomize Settings</button>
             </div>
         </div>
     </div>
@@ -322,8 +361,7 @@
         const blendPrevButton = document.getElementById('prev-blend');
         const blendNextButton = document.getElementById('next-blend');
 
-        // Update number of circles based on input
-        numCircleInput.addEventListener('change', function () {
+        function updateNumCircles() {
             const newNumCircles = parseInt(numCircleInput.value);
             while (circles.length < newNumCircles) {
                 const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
@@ -334,6 +372,11 @@
                 const circleData = circles.pop();
                 svg.removeChild(circleData.elem);
             }
+        }
+
+        // Update number of circles based on input
+        numCircleInput.addEventListener('change', function () {
+            
             updateCircles();
         });
 
@@ -365,6 +408,8 @@
 
 
         function updateCircles() {
+            updateNumCircles()
+
             const newCircleSize = parseInt(circleSizeInput.value);
             circles.forEach((circleData, index) => {
                 circleData.elem.setAttribute('r', newCircleSize);
@@ -442,6 +487,38 @@
                 ctx.fill();
             });
         }
+
+        function download() {
+            // Create a temporary canvas with the same dimensions
+            var tempCanvas = document.createElement('canvas');
+            tempCanvas.width = canvas.width;
+            tempCanvas.height = canvas.height;
+            var tempCtx = tempCanvas.getContext('2d');
+
+            // Fill the temporary canvas with a white background
+            tempCtx.fillStyle = '#FFFFFF';
+            tempCtx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw the original canvas onto the temporary canvas
+            tempCtx.drawImage(canvas, 0, 0);
+
+            // Create a link and set the temporary canvas's data URL as the href
+            var link = document.createElement('a');
+            link.href = tempCanvas.toDataURL('image/png');
+            link.download = 'drawing.png';
+            link.click();
+        }
+
+        function randomizeSettings() {
+            // randomize
+            numCircleInput.value = Math.floor(1 + Math.random() * 50);
+            circleSizeInput.value = Math.floor(1 + Math.random() * 400);
+            maxDelayInput.value = Math.floor(1 + Math.random() * 20000);
+            currentBlendModeIndex = Math.floor(Math.random() * blendModes.length);
+            updateBlendMode();
+            updateCircles();
+        }
+
 
     </script>
 </body>
